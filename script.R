@@ -1,43 +1,59 @@
-# load the libraries
-library(rrcov)
-library(caret)
-library(klaR)
+# for testing
+#set.seed(1234)
 
-# load function CovMcdR
+# Load the libraries
+library(rrcov)
+library(mclust)
+
+# Load function CovMcdR
 source('CovMcdF.R')
 
-# setting variables
-TIMES<-1
+# Setting variables
+TIMES <- 1    # number of iterations
 
-# load the spam dataset
-spam20<-read.table('spam21.dat')
-
-# define an 70%/30% train/test split of the dataset
-trainIndex <- createDataPartition(spam20$V21, times=TIMES, p=0.70, list=FALSE)
-
-spam20$V21<-NULL
+# Load the spam dataset
+spamData <- read.table('spam20.dat')
 
 for(i in 1:TIMES) {
-  data_train <- spam20[trainIndex[,i],]
-  data_test <- spam20[-trainIndex[,i],]
+  # Define an 70%/30% train/test split of the dataset
+  inx.spam <- sample(1:30, 9)
+  inx.ham <- sample(31:nrow(spamData), round(0.3*nrow(spamData)))
+  inx.test <- c(inx.spam, inx.ham)
   
-  data_train.mad<-sapply(1:ncol(data_train), function(j) data_train[,j]/mad(data_train[,j]))
-  spam.mcdF<-CovMcdF(data_train.mad, alpha=0.5)
+  trainData <- spamData[-inx.test, ]
+  testData <- spamData[inx.test, ]
+  
+  rob <- CovMcdF(trainData)
+  summary(rob$mah)
+  
+  drob <- mahalanobis(testData, rob$center, rob$cov)
+  summary(drob)
+  
+  plot(drob, ylim=c(30, 40))
+  points(inx.spam, drob[inx.spam], col=2, pch=15)
+  
+  ### Chi-Squared
+  abline(h=qchisq(.975, 20), col="green")
+  
+  ## Beta
+  nt<-nrow(testData)
+  abline(h=(nt-1)^2/nt*qbeta(.975, 10, (nt-21)/2), col="blue")
+  
+  nt<-round(nrow(testData)*(sum(rob$wt))/nrow(trainData))
+  abline(h=(nt-1)^2/nt*qbeta(.975, 10, (nt-21)/2), col="red")
+
+  ## F
+  p <- ncol(rob$rmcd@X)
+  h <- round(nrow(testData)*(sum(rob$wt))/nrow(trainData))
+  nt<-nrow(testData)
+  m <- madj.fun(h, p, nt)
+  qF <- qf(0.975, p, m-p+1)
+  abline(h=qF*p*m/(m-p+1), col="orange")
+  
+  p <- ncol(rob$rmcd@X)
+  h <- nrow(testData)
+  nt<-nrow(testData)
+  m <- madj.fun(h, p, nt)
+  qF <- qf(0.975, p, m-p+1)
+  abline(h=qF*p*m/(m-p+1), col="purple")
 }
-
-## distance plot (not reported in the example)
-
-n<-length(spam.mcdF$wt)
-nw<-sum(spam.mcdF$wt)
-p<-ncol(data_train)
-ccw1=((nw-1)^2)/nw
-quantrmcd<-qbeta(.975,p/2, (nw-p-1)/2)*ccw1
-ccw2=(nw^2-1)*p/nw/(nw-p)
-quantout<-qf(.975,p, nw-p)*ccw2
-plot(spam.mcdF$mah,type='n',ylab='Squared Robust Distance', xlab='')
-abline(h=quantout)
-abline(h=quantrmcd,lty=2)
-inx.bad<-which(spam.mcdF$wt==0)
-inx.good<-which(spam.mcdF$wt!=0)
-points(inx.good,spam.mcdF$mah[inx.good],pch=1)
-points(inx.bad,spam.mcdF$mah[inx.bad],pch=2)
