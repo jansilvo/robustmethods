@@ -3,7 +3,7 @@
 
 # Load the libraries
 library(rrcov)
-library(mclust)
+#library(mclust)
 
 # Load function CovMcdR
 source('CovMcdF.R')
