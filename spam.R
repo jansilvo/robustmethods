@@ -1,70 +1,159 @@
+# for testing
+set.seed(1234)
+
+# Load the libraries
 library(rrcov)
-source('CovMcdF.R')
+
+# Load function CovMcdR
+source('lib/CovMcdF.R')
+
+# Setting variables
+TIMES <- 100    # number of iterations
+
+# Load the spam dataset
+spamData <- read.table('spam20.dat')
+
+alpha <- 0.10 #c(0.01, 0.05, 0.10)
+chisq <- chisq.fdr <- chisq.fdx <- matrix(0, 2, 2)
+beta <- beta.fdr <- beta.fdx <- matrix(0, 2, 2)
+f <- f.fdr <- f.fdx <- matrix(0, 2, 2)
+
+for(i in 1:TIMES) {
+  # Define an 70%/30% train/test split of the dataset
+  inx.spam <- sample(1:30, 9)
+  inx.ham <- sample(31:nrow(spamData), round(0.3*nrow(spamData)))
+  inx.test <- c(inx.spam, inx.ham)
+
+  trainData <- spamData[-inx.test, ]
+  testData <- spamData[inx.test, ]
+  
+  nt <- nrow(testData)
+  true <-c (rep(1, 9), rep(0, nt-9))
+  
+  rob <- CovMcdF(trainData)
+  summary(rob$mah)
+  
+  drob <- mahalanobis(testData, rob$center, rob$cov)
+  summary(drob)
+  
+  #plot(drob, ylim=c(30, 40))
+  #points(inx.spam, drob[inx.spam], col=2, pch=15)
+  
+  ### Chi-Squared
+  threshold <- qchisq(.975, 20)
+  #abline(h=threshold, col="green")
+  
+  z <- rep(0, nt)
+  z <- ifelse(drob>=threshold, 1, 0)
+  chisq <- chisq + table(true, z)
+  
+  ### Chi-Squared multiple testing
+#   p.val<-NULL
+# 
+#   for(i in 1:nt) {
+#     p.val[i] <- 1-pchisq(drob[i], 20)
+#   }
+#   
+#   ### confusion matrix from FDR
+#   th.fdr <- rank(p.val)*alpha/nt
+#   test.fdr <- as.numeric(p.val<th.fdr)
+#   chisq.fdr <- chisq.fdr + table(true, test.fdr)
+#   
+#   ### confusion matrix from FDX
+#   c <- 0.1
+#   rr <- rank(p.val)
+#   th.fdx <- (round(rr*c)+1)*alpha/(nt+1+round(rr*c)-rr)
+#   test.fdx <- as.numeric(p.val<th.fdx)
+#   chisq.fdx <- chisq.fdx + table(true, test.fdx)
+
+  
+  ## Beta
+  #nt<-nrow(testData)
+  #abline(h=(nt-1)^2/nt*qbeta(.975, 10, (nt-21)/2), col="blue")
+  
+  nt<-round(nrow(testData)*(sum(rob$wt))/nrow(trainData))
+  threshold <- (nt-1)^2/nt*qbeta(.975, 10, (nt-21)/2)
+  #abline(h=threshold, col="red")
+  
+  z <- rep(0, nt)
+  z <- ifelse(drob>=threshold, 1, 0)
+  beta <- beta + table(true, z)
+  
+  ### Beta multiple testing
+#   p.val<-NULL
+# 
+#   ccw1 <- (nt-1)^2/nt
+#   for(i in 1:nrow(testData)) {
+#     d <- drob[i]/ccw1
+#     p.val[i] <- 1-pbeta(d, 10, (nt-21)/2)
+#   }
+#   
+#   ### confusion matrix from FDR
+#   th.fdr <- rank(p.val)*alpha/nt
+#   test.fdr <- as.numeric(p.val<th.fdr)
+#   beta.fdr <- beta.fdr + table(true, test.fdr)
+#   
+#   ### confusion matrix from FDX
+#   c <- 0.1
+#   rr <- rank(p.val)
+#   th.fdx <- (round(rr*c)+1)*alpha/(nt+1+round(rr*c)-rr)
+#   test.fdx <- as.numeric(p.val<th.fdx)
+#   beta.fdx <- beta.fdx + table(true, test.fdx)
 
 
-### Spam detection
-
-spam20<-read.table('spam20.dat')
-spam20.mad<-sapply(1:ncol(spam20), function(j) spam20[,j]/mad(spam20[,j]) )
-spam.mcdF<-CovMcdF(spam20.mad, alpha=0.5)
-
-## distance plot (not reported in the example)
-
-n<-length(spam.mcdF$wt)
-nw<-sum(spam.mcdF$wt)
-p<-ncol(spam20)
-ccw1=((nw-1)^2)/nw
-quantrmcd<-qbeta(.975,p/2, (nw-p-1)/2)*ccw1
-ccw2=(nw^2-1)*p/nw/(nw-p)
-quantout<-qf(.975,p, nw-p)*ccw2
-plot(spam.mcdF$mah,type='n',ylab='Squared Robust Distance', xlab='')
-abline(h=quantout)
-abline(h=quantrmcd,lty=2)
-inx.bad<-which(spam.mcdF$wt==0)
-inx.good<-which(spam.mcdF$wt!=0)
-points(inx.good,spam.mcdF$mah[inx.good],pch=1)
-points(inx.bad,spam.mcdF$mah[inx.bad],pch=2)
-
-#### Spam 1 and not spam 0
-true<-c(rep(1,30),rep(0,n-30))
-
-#### Vector of detections: z==1 detection z==0 otherwise
-z<-rep(0,n)
-z[inx.good]<-ifelse(spam.mcdF$mah[inx.good]>=quantrmcd ,1,0)
-z[inx.bad]<-ifelse(spam.mcdF$mah[inx.bad]>=quantout ,1,0)
-
-### confusion matrix from RMCD
-table(true,z)
-
-### Multiple testing
-p.val<-NULL
-for(i in 1:n)
-{
-  if(spam.mcdF$wt[i]==1)
-  {
-    d.good<-spam.mcdF$mah[i]/ccw1
-    p.val[i]<-1-pbeta(d.good, p/2,(nw-p-1)/2)
-  }	
-  if(spam.mcdF$wt[i]==0)
-  {
-    d.bad<-spam.mcdF$mah[i]/ccw2
-    p.val[i]<-1-pf(d.bad,p, nw-p)
-  }	
+  ## F
+  p <- ncol(rob$rmcd@X)
+  h <- round(nrow(testData)*(sum(rob$wt))/nrow(trainData))
+  nt <- nrow(testData)
+  m <- madj.fun(h, p, nt)
+  qF <- qf(0.975, p, m-p+1)
+  threshold <- qF*p*m/(m-p+1)
+  #abline(h=threshold, col="orange")
+  
+  z <- rep(0, nt)
+  z <- ifelse(drob>=threshold, 1, 0)
+  f <- f + table(true, z)
+  
+#   p <- ncol(rob$rmcd@X)
+#   h <- nrow(testData)
+#   nt<-nrow(testData)
+#   m <- madj.fun(h, p, nt)
+#   qF <- qf(0.975, p, m-p+1)
+#   abline(h=qF*p*m/(m-p+1), col="purple")
+  
+  ### F multiple testing
+#   p.val<-NULL
+# 
+#   ccw1 <- p*m/(m-p+1)
+#   for(i in 1:nrow(testData)) {
+#     d <- drob[i]/ccw1
+#     p.val[i] <- 1 - pf(d, p, m-p+1)
+#   }
+#   
+#   ### confusion matrix from FDR
+#   th.fdr <- rank(p.val)*alpha/nt
+#   test.fdr <- as.numeric(p.val<th.fdr)
+#   f.fdr <- f.fdr + table(true, test.fdr)
+#   
+#   ### confusion matrix from FDX
+#   c <- 0.1
+#   rr <- rank(p.val)
+#   th.fdx <- (round(rr*c)+1)*alpha/(nt+1+round(rr*c)-rr)
+#   test.fdx <- as.numeric(p.val<th.fdx)
+#   f.fdx <- f.fdx + table(true, test.fdx)
 }
 
-## FDR
-alpha<-c(0.01,0.05,0.10)	
-th.fdr<-rank(p.val)*alpha/n
-test.fdr<-as.numeric(p.val<th.fdr)
+print("Confusion matrix from Chi Squared")
+chisq/TIMES
+# chisq.fdr/TIMES
+# chisq.fdx/TIMES
 
-### confusion matrix from FDR
-table(true.fdr,test)
+print("Confusion matrix from Beta")
+beta/TIMES
+# beta.fdr/TIMES
+# beta.fdx/TIMES
 
-### FDX
-c<-0.1
-rr<-rank(p.val)
-th.fdx<-(round(rr*c)+1)*alpha/(n+1+round(rr*c)-rr)
-test.fdx<-as.numeric(p.val<th.fdx)
-
-### confusion matrix from FDX
-table(true,test.fdx)
+print("Confusion matrix from F")
+f/TIMES
+# f.fdr/TIMES
+# f.fdx/TIMES
