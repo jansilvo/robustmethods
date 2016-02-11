@@ -44,7 +44,7 @@ for(i in 1:TIMES) {
 #   )
 
   ## 3
-  fit.km <- kmeans(testData, 2)
+  fit.km <- kmeans(testData, 2, nstart=25)
   fit.pm <- pam(testData, 2)
 #   fit.km$size
 #   fit.km$centers
