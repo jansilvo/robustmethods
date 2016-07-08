@@ -3,10 +3,6 @@ set.seed(1234)
 
 library(mclust)
 
-# Load function wssplot
-source('lib/wssplot.R')
-source("lib/rand.index.r")
-
 # Setting variables
 MAXNC <- 5    # max number of cluster
 TIMES <- 100    # number of iterations
@@ -25,15 +21,12 @@ for(i in 1:TIMES) {
   trainData <- spamData[-inx.test, ]
   testData <- spamData[inx.test, ]
 
+  mc <- Mclust(trainData, G=2, modelNames="EEE")
+  
   nt <- nrow(testData)
-  ct.mt <- matrix(0, 2, 2)
   true <-c (rep(1, 9), rep(2, nt-9))
-  
-  mc <- Mclust(testData, G=2, modelNames="EEE")
-  
-  ct.mc <- ct.mc + table(true, mc$classification)
-  
-  #rand.index(true, mc$classification)
+  cl <- predict.Mclust(mc, newdata=testData)
+  ct.mc <- ct.mc + table(true, cl$classification)
 }
 
 ct.mc/TIMES

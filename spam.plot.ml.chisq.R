@@ -20,9 +20,9 @@ mah<-mahalanobis(spamData, mle$estcent, mle$estcov)
 threshold <- qchisq(.975, 20)
 
 # Distance plot
-plot(sqrt(mah), type='n', xlab="", ylab='Mahalanobis Distance')
+plot(sqrt(mah), type='n', xlab="Index", ylab='Mahalanobis Distance', main="MLE")
 abline(h=sqrt(threshold))
 inx.bad <- which(mah>threshold)
 inx.good <- which(mah<=threshold)
-points(inx.good, sqrt(mah[inx.good]), pch=20)
-points(inx.bad, sqrt(mah[inx.bad]), pch=20)
+points(inx.good, sqrt(mah[inx.good]), pch="*")
+points(inx.bad, sqrt(mah[inx.bad]), pch="*")

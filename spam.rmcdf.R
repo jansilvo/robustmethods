@@ -1,3 +1,6 @@
+# for testing
+set.seed(1234)
+
 # Load the libraries
 library(rrcov)
 
@@ -18,14 +21,15 @@ quantrmcd<-qbeta(.975,p/2, (nw-p-1)/2)*ccw1
 ccw2=(nw^2-1)*p/nw/(nw-p)
 quantout<-qf(.975,p, nw-p)*ccw2
 
+inx.bad <- which(spam.mcdF$wt==0)
+inx.good <- which(spam.mcdF$wt!=0)
+
 # Distance plot
-plot(spam.mcdF$mah, type='n', ylab='Squared Robust Distance', xlab='')
-abline(h=quantout)
-abline(h=quantrmcd, lty=2)
-inx.bad<-which(spam.mcdF$wt==0)
-inx.good<-which(spam.mcdF$wt!=0)
-points(inx.good,spam.mcdF$mah[inx.good], pch=1, col="green3")
-points(inx.bad,spam.mcdF$mah[inx.bad], pch=2, col="red")
+# plot(spam.mcdF$mah, type='n', ylab='Squared Robust Distance', xlab='')
+# abline(h=quantout)
+# abline(h=quantrmcd, lty=2)
+# points(inx.good,spam.mcdF$mah[inx.good], pch=1, col="green3")
+# points(inx.bad,spam.mcdF$mah[inx.bad], pch=2, col="red")
 
 # Spam 1 and not spam 0
 true<-c(rep(1,30),rep(0,n-30))
@@ -77,39 +81,39 @@ for(alpha in c(0.01, 0.05, 0.10)) {
 }
 
 
-### Custer (kmeans)
-library(cluster)
-library(NbClust)
-library(mclust)
-source('lib/wssplot.R')
-
-# Number of cluster
-wssplot(spamData, nc=5)
-
-nc <- NbClust(spamData, min.nc=2, max.nc=5, method="kmeans")
-table(nc$Best.n[1,])
-
-barplot(
-  table(nc$Best.n[1,]), 
-  xlab="Number of Clusters",
-  ylab="Number of Criteria",
-  main="Number of Clusters Chosen by 26 Criteria"
-)
-
-km <- kmeans(spamData, 3, nstart=25)
-source('lib/CovMcdF.R')
-clusplot(spamData, km$cluster, color = TRUE, shade = TRUE, labels = 2, lines = 0)
-
-
-# Cluster (mclust)
-BIC = mclustBIC(spamData)
-plot(BIC, legendArgs = list(x = "bottom"))
-spamSummary <- summary(BIC, data=spamData, G=2)
-
-mc <- Mclust(spamData, G=2, modelNames="EEE")
-true<-c(rep(1,30),rep(2,n-30))
-coordProj(data = spamData, dimens = c(1,2), what = "classification", parameters = spamSummary$parameters, z = spamSummary$z)
-coordProj(data = spamData, dimens = c(1,2), what = "uncertainty", parameters = spamSummary$parameters, z = spamSummary$z)
-coordProj(data = spamData, dimens = c(1,2), what = "errors", parameters = spamSummary$parameters, z = spamSummary$z, trut  = true)
-#mclust2Dplot(spamData[,c(1,2)], classification = mc$classification, parameters = mc$parameters)
-#mclust2Dplot(data=spamData[,c(7,8)], what="classification", identify=TRUE, parameters=mc$parameters, z=mc$z)
+# ### Custer (kmeans)
+# library(cluster)
+# library(NbClust)
+# library(mclust)
+# source('lib/wssplot.R')
+# 
+# # Number of cluster
+# wssplot(spamData, nc=5)
+# 
+# nc <- NbClust(spamData, min.nc=2, max.nc=5, method="kmeans")
+# table(nc$Best.n[1,])
+# 
+# barplot(
+#   table(nc$Best.n[1,]), 
+#   xlab="Number of Clusters",
+#   ylab="Number of Criteria",
+#   main="Number of Clusters Chosen by 26 Criteria"
+# )
+# 
+# km <- kmeans(spamData, 3, nstart=25)
+# source('lib/CovMcdF.R')
+# clusplot(spamData, km$cluster, color = TRUE, shade = TRUE, labels = 2, lines = 0)
+# 
+# 
+# # Cluster (mclust)
+# BIC = mclustBIC(spamData)
+# plot(BIC, legendArgs = list(x = "bottom"))
+# spamSummary <- summary(BIC, data=spamData, G=2)
+# 
+# mc <- Mclust(spamData, G=2, modelNames="EEE")
+# true<-c(rep(1,30),rep(2,n-30))
+# coordProj(data = spamData, dimens = c(1,2), what = "classification", parameters = spamSummary$parameters, z = spamSummary$z)
+# coordProj(data = spamData, dimens = c(1,2), what = "uncertainty", parameters = spamSummary$parameters, z = spamSummary$z)
+# coordProj(data = spamData, dimens = c(1,2), what = "errors", parameters = spamSummary$parameters, z = spamSummary$z, trut  = true)
+# mclust2Dplot(spamData[,c(1,2)], classification = mc$classification, parameters = mc$parameters)
+# mclust2Dplot(data=spamData[,c(7,8)], what="classification", identify=TRUE, parameters=mc$parameters, z=mc$z)
